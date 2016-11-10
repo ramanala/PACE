@@ -41,7 +41,7 @@ There are also some configuration files (zoo2.cfg, zoo3.cfg, and zoo4.cfg) used 
 Side note: We will associate the number '2' for the first storage server, '3' for the second, and '4' for the third server. We use '1' to denote the client. So, zoo2.cfg is the configuration for the first server. 
 
 Here is the content of the config file:
-================================================
+
 tickTime=2000
 dataDir=/mnt/data1/PACE/example/zk/workload_dir2
 clientPort=2182
@@ -50,13 +50,13 @@ syncLimit=2
 server.1=127.0.0.2:2888:3888
 server.2=127.0.0.3:2889:3889
 server.3=127.0.0.4:2890:3890
-================================================
+
 
 As you can see, the first server is configured with some IPs, also informed about the other servers in the cluster. Importantly, the server is configured to use a directory (some arbitrary location on your local file system) to store all its data. Similarly, other servers are also configured use a directory for their storage. Individual servers should store their data to different directories.  
 
 Next, let us initialize ZooKeeper to store some data. The zk_init.sh file does this.  The script starts the cluster with the configuration files that we saw earlier. We are going to test zookeeper-3.4.8. So, install it somewhere and point that directory as ZK_HOME variable in the init script. If everything is configured correctly, you should see something like:
 
-===============================================
+
 ZooKeeper JMX enabled by default
 Using config: /mnt/data1/PACE/example/zk/zoo2.cfg
 Starting zookeeper ... STARTED
@@ -66,7 +66,7 @@ Starting zookeeper ... STARTED
 ZooKeeper JMX enabled by default
 Using config: /mnt/data1/PACE/example/zk/zoo4.cfg
 Starting zookeeper ... STARTED
-===============================================
+
 Also, notice that we inserted 8192 'a' s for the ZK node /zk_test. You can think of /zk_test as the key and the 'a's as the value for it. So if the initialization was successful, you should see this when you run grep -n -i -r aaaaaaaa *:
 
 Binary file workload_dir2/version-2/log.100000001 matches

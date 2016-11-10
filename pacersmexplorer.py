@@ -172,7 +172,7 @@ def __get_replay_dirs(machines, base_name):
 			stdout_files[machine_id] = os.path.join(base_path, str(machine_id) + '.input_stdout')
 	return (base_path, dirnames,stdout_files) 
 
-def unique_gvp(gvps, machines, filter_machines):
+def unique_grp(grps, machines, filter_machines):
 	assert len(machines) > 0 and len(filter_machines) < len(machines)
 	to_ret = []
 	to_ret_set = set()
@@ -180,9 +180,8 @@ def unique_gvp(gvps, machines, filter_machines):
 	temp = {}
 	max_for_state = defaultdict(lambda:-1, temp)
 
-	for state in gvps:
+	for state in grps:
 		state_arr = list(state)
-		#print state_arr
 		for machine in machines:
 			if machine not in filter_machines:
 				val = state_arr[machine]
@@ -195,26 +194,6 @@ def unique_gvp(gvps, machines, filter_machines):
 				state_arr.insert(machine, max_for_state[tuple(state_arr)])
 		to_ret_set.add(tuple(state_arr))	
 	return to_ret_set
-
-def __get_workload_range(pace_configs, pace_conf_file, interesting_prefix_states):
-	pace_conf = []
-	with open(pace_conf_file, "r") as f:
-		pace_conf = pickle.load(f)
-	assert len(pace_conf.keys()) == len(pace_configs)
-	
-	workload_range = []
-	for state in interesting_prefix_states:
-		belongs = True
-		for key in pace_conf.keys():
-			if not (state[key] >= pace_conf[key][0] and state[key] <= pace_conf[key][1]):
-				belongs = False
-				break
-
-		if belongs:
-			workload_range.append(state)
-
-	print 'Getting workload range : ' + str(len(workload_range)) 
-	return workload_range
 
 def check_logically_same(to_omit_list):
 	ops_eq = all(x.op == to_omit_list[0].op for x in to_omit_list)
@@ -235,13 +214,13 @@ def check_logically_same(to_omit_list):
 	else:
 		return False
 
-def __get_interesting_prefixes(replayer):
+def __compute_reachable_global_prefixes(replayer):
 	print 'Computing globally reachable prefix states'
 	assert paceconfig(0).cached_prefix_states_file is not None and len(paceconfig(0).cached_prefix_states_file) > 0
 	prefix_cached_file = paceconfig(0).cached_prefix_states_file
 
 	interesting_prefix_states = []
-	final_interesting_states_reorder = set()
+	final_reachable_prefix_fsync_deps = set()
 		
 	if not os.path.isfile(prefix_cached_file):
 		print 'No cached file. Computing reachable prefixes from scratch.'
@@ -251,14 +230,13 @@ def __get_interesting_prefixes(replayer):
 		list1 = base_lists[1]
 		interesting_prefix_states = []
 
-		# Algorithm: 
-		# Aim : To find all consistent cuts of persistent states. 
+		# Algorithm to find all consistent cuts of persistent states: 
 		# Naive method: Let us say there are 3 machines. Consider that the number of events
 		# in these traces from three machines as <n1, n2, n3>. So, there are n1 X n2 X n3
 		# ways in which these traces could combine.
 		# Should we check for everything?
 		# No, we can do better; intuition: if i X j is not consistent then any superset of
-		# it <i, j , k> for any k is invalid!
+		# it <i, j , k> for any k is inconsistent.
 		
 		for index1 in list0:
 			for index2 in list1:
@@ -281,21 +259,26 @@ def __get_interesting_prefixes(replayer):
 				candidate.append(replayer.persistent_op_index(index, point))
 				index += 1
 			candidate = tuple(candidate)
-			final_interesting_states_reorder.add(candidate)
+			final_reachable_prefix_fsync_deps.add(candidate)
 				
 		with open(prefix_cached_file, "w") as f:
-			pickle.dump(final_interesting_states_reorder, f, protocol = 0)
+			pickle.dump(final_reachable_prefix_fsync_deps, f, protocol = 0)
 	else:
 		print 'Using cached globally reachable states'
 		with open(prefix_cached_file, "r") as f:
-			final_interesting_states_reorder = pickle.load(f)
+			final_reachable_prefix_fsync_deps = pickle.load(f)
 
+	final_reachable_prefix_no_deps = set(list(final_reachable_prefix_fsync_deps)[:])
+	assert not bool(final_reachable_prefix_no_deps.symmetric_difference(final_reachable_prefix_fsync_deps))
+	
+	# We are mostly done here. But there is one more optimization that we could do.
+	# if a trace ends with fsync or fdatasync, then it can be skipped for replay 
+	# because there is no specific operation that we need to replay fsyncs. However,
+	# they are important to calculate FS reordering dependencies. So, we maintain
+	# two sets: one with fsync deps (we will use when we apply FS reordering),
+	# one with no fsync deps that we will use to replay globally reachable prefixes
 
-	final_interesting_states_other = set(list(final_interesting_states_reorder)[:])
-	interesting_states_check = set(list(final_interesting_states_reorder)[:])
-
-	print final_interesting_states_other.symmetric_difference(interesting_states_check)
-
+	interesting_states_check = set(list(final_reachable_prefix_fsync_deps)[:])
 	for state in interesting_states_check:
 		machine = 0
 		for end_point in state:
@@ -304,15 +287,17 @@ def __get_interesting_prefixes(replayer):
 				prev_point = replayer.get_prev_op(state)
 				# if subsumed by another GVP, just remove this. If not subsumed, leave it
 				if prev_point in interesting_states_check:
-					final_interesting_states_other.remove(state)
+					final_reachable_prefix_no_deps.remove(state)
 				break
 			machine += 1
 
-	assert final_interesting_states_reorder is not None and len(final_interesting_states_reorder) > 0
-	assert final_interesting_states_other is not None and len(final_interesting_states_other) > 0
-	return (final_interesting_states_reorder, final_interesting_states_other)
+	assert final_reachable_prefix_fsync_deps is not None and len(final_reachable_prefix_fsync_deps) > 0
+	assert final_reachable_prefix_no_deps is not None and len(final_reachable_prefix_no_deps) > 0
+	assert final_reachable_prefix_no_deps <= final_reachable_prefix_fsync_deps
 
-def globally_valid_prefix(replayer, interesting_prefix_states, replay = True):
+	return (final_reachable_prefix_fsync_deps, final_reachable_prefix_no_deps)
+
+def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay = True):
 	print 'Producing prefix crash states...' 
 	machines = replayer.conceptual_machines()
 
@@ -341,7 +326,7 @@ def globally_valid_prefix(replayer, interesting_prefix_states, replay = True):
 	print 'Prefix states : ' + str(count)
 	print 'Prefix replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def atomicity_prefix_correlated(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
+def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
 	assert failure_mode == 'all' or failure_mode == 'majority'
 	machines = replayer.conceptual_machines()
 	fs_ops = replayer.fs_ops_indexes()	
@@ -425,7 +410,7 @@ def atomicity_prefix_correlated(replayer, interesting_prefix_states, client_inde
 	print 'Atomicity Prefix correlated states : ' + str(count)
 	print 'Atomicity Prefix correlated replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def reordering_correlated(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
+def replay_correlated_reordering(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
 	assert failure_mode == 'all' or failure_mode == 'majority'
 
 	def end_highest_so_far(machine, curr_endpoint):
@@ -554,7 +539,7 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, fai
 	print 'Reordering correlated ' + failure_mode + ' states : ' + str(reordering_count)
 	print 'Reordering correlated ' + failure_mode + ' replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def atomicity_reordering_correlated(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
+def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, client_index, failure_mode, how_many_majorities = 1, replay = True):
 	assert failure_mode == 'all' or failure_mode == 'majority'
 
 	machines = replayer.conceptual_machines()
@@ -679,30 +664,23 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 		t = MultiThreadedChecker(MultiThreadedChecker.queue, i)
 		t.setDaemon(True)
 		t.start()
-		
-	(interesting_prefix_states_reorder, interesting_prefix_states_other) = __get_interesting_prefixes(replayer)
-	workload_range = __get_workload_range(pace_configs, pace_conf_file, interesting_prefix_states_reorder)
-
-	gvps_0_1 = unique_gvp(interesting_prefix_states_other, replayer.conceptual_machines(), [0,1])
-	gvps_0_1_reordered  = unique_gvp(interesting_prefix_states_reorder, replayer.conceptual_machines(), [0,1])
-	#PACE exploration
-	mode = 'RSM'
-
-	#MultiThreadedChecker.reset()
-	#globally_valid_prefix(replayer, interesting_prefix_states_other, False)
 	
-	if mode == 'RSM':
-		MultiThreadedChecker.reset()
-		reordering_correlated(replayer, gvps_0_1_reordered, client_index, 'majority', 1, False)
+	(reachable_prefix_fsync_deps, reachable_prefix_no_deps) = __compute_reachable_global_prefixes(replayer)
 
-		MultiThreadedChecker.reset()
-		atomicity_reordering_correlated(replayer, gvps_0_1, client_index, 'majority', 1, False)
+	grps_0_1_no_deps = unique_grp(reachable_prefix_no_deps, replayer.conceptual_machines(), [0,1])
+	grps_0_1_fsync_deps  = unique_grp(reachable_prefix_fsync_deps, replayer.conceptual_machines(), [0,1])
+	
+	MultiThreadedChecker.reset()
+	replay_correlated_global_prefix(replayer, grps_0_1_no_deps, False)
 
-		MultiThreadedChecker.reset()
-		atomicity_prefix_correlated(replayer, gvps_0_1, client_index, 'majority', 1, False)
+	MultiThreadedChecker.reset()
+	replay_correlated_reordering(replayer, grps_0_1_fsync_deps, client_index, 'majority', 1, False)
 
-	else:		
-		assert False
+	MultiThreadedChecker.reset()
+	replay_correlated_atomicity_reordering(replayer, grps_0_1_no_deps, client_index, 'majority', 1, False)
+
+	MultiThreadedChecker.reset()
+	replay_correlated_atomicity_prefix(replayer, grps_0_1_no_deps, client_index, 'majority', 1, False)
 
 	os.system('cp ' + os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'micro_ops') + ' ' + paceconfig(0).scratchpad_dir)
 

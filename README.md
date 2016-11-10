@@ -91,6 +91,12 @@ After this step, you should see 4 new directories of the form traces_dir{i} crea
 
 ###### Parsing and Checking for correlated crash vulnerabilities
 
-After this step, we need to make sure that the traces we collected do make sense and PACE is able to parse the trace and understand dependencies. To do this, simply do ./run.sh False. False means that just check if we are ready to replay to find vulnerabilities but do not yet do not start the checking. 
+After this step, we need to make sure that the traces we collected do make sense and PACE is able to parse the trace and understand dependencies. To do this, simply do ./run.sh False. False means that just check if we are ready to replay to find vulnerabilities but do not yet do not start the checking. This is content of the run.sh file.  
+
+$PACE_DIR/pace-check.py --trace_dirs $ZK_DIR/traces_dir2 $ZK_DIR/traces_dir3 $ZK_DIR/traces_dir4 $ZK_DIR/traces_dir1  --threads 1 --sockconf $ZK_DIR/sockconf --checker=$ZK_DIR/zk_checker.py --scratchpad_base /run/shm --rsm --replay $1 
+
+It invokes the pace-check tool, trace_dirs tell where are the traces that we want to parse, threads denote the # threads we want to replay with, sockconf is a file that informs PACE about the interesting IP addresses and port numbers that we care about in the trace, checker is the script that contains all assertions that we want to make about user data, scratchpad_base is where the correlated crash disk images are going to be saved, the rsm parameter tells PACE if the distributed consensus is achieved through a replicated state machine protocol. The rsm parameter is needed so that PACE can use efficient pruning techniques to find vulnerabilities. Since ZooKeeper uses the ZAB which is a RSM protocol, we just specify as --rsm. 
 
 If PACE understands all dependencies then it will just spit out all the events that happen in the cluster as part of the workload. At this point, we are ready to check for vulnerabilities. 
+
+To check for vulnerabilities, just do ./run.sh True.  

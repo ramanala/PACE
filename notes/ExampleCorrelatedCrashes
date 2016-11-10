@@ -1,0 +1,41 @@
+Following are some of the example of recent correlated crashes that happened in the real world!
+
+1. http://www.datacenterknowledge.com/archives/2015/08/19/lightning-strikes-google-data-center-disrupts-cloud-services/
+Google data center power interruptions  - More here  https://status.cloud.google.com/incident/compute/15056#5719570367119360
+
+2. http://www.theregister.co.uk/2014/05/28/joyent_cloud_down/
+hacker news article = https://news.ycombinator.com/item?id=7806972. Entire data center went down (all compute nodes suddenly and all at once rebooted). https://www.joyent.com/
+
+Comment from the CEO of Joyent = "It should go without saying that we're mortified by this. While the immediate cause was operator error, there are broader systemic issues that allowed a fat finger to take down a datacenter. As soon as we reasonably can, we will be providing a full postmortem of this: how this was architecturally possible, what exactly happened, how the system recovered, and what improvements we are/will be making to both the software and to operational procedures to assure that this doesn't happen in the future (and that the recovery is smoother for failure modes of similar scope)."
+
+3. Lightning stops SGX (Singapore Financial Exchange)
+http://www.datacenterdynamics.com/power-cooling/lessons-from-the-singapore-exchange-failure/94438.fullarticle
+
+Root cause = The trigger event for the power outage was the simultaneous voltage dip in the electricity supply from Singapore Power on both feeds at PDC that activated both emergency power systems (the Diesel Rotary Uninterruptible Power Supplies (DRUPS)).There was a malfunction to a component of one of the two DRUPS, which caused its output frequency to differ from the frequency of the other DRUPS.The downstream Static Transfer Switches (STS) could not compensate for the difference in frequency, and caused an out-of-phase power transfer which in turn caused a surge in current that led to a total power outage to the PDC, which shut down all of SGX’s IT systems and equipment and tripped a number of circuit breakers.The key cause of the power outage to the PDC was the power transfer by the STS when the frequencies of the output of the two DRUPS were unsynchronized.”
+
+4. Oregon governmental data center catostrophic failure 
+http://www.datacenterknowledge.com/archives/2013/07/16/catastrophic-storage-failure-slows-oregon-jobless-checks/
+
+5. 2009: Vodafone Data Floats Away in Istanbul
+http://www.americanis.net/2014/5-worst-disasters-data-center-history/
+Vodafone maintained a data center in Istanbul, Turkey and everything was fine until September of 2009 when the facility was suddenly flooded during a torrential downpour. Employees attempted to salvage what they could, but it took the watery onslaught just four minutes to fill rooms halfway up. Computers, desks, and chairs began floating while employees evacuated. Water levels continued to rise until the rooms were completely submerged.
+
+6. Fire in Samsung data center 
+http://www.technewsworld.com/story/80333.html
+
+For some reason, Samsung had not backed up certain data that was saved on servers housed in its Gwacheon location. The data was lost forever and came as a huge shock to the IT world. How could a company as well known and successful as Samsung overlook such an easily-remedied risk? It seemed like a novice mistake to make, and yet telecommunications titan Samsung made it.
+More info : http://www.americanis.net/2014/5-worst-disasters-data-center-history/
+
+7. Truck driver slams into data center 
+http://www.computerworlduk.com/galleries/infrastructure/ten-datacentre-disasters-that-brought-firms-offline-3593580/#3
+
+8. Amazon and MS data centers down in Dublin
+http://www.computerworlduk.com/galleries/infrastructure/ten-datacentre-disasters-that-brought-firms-offline-3593580/#5
+The natural disaster took out the main power and the backup generator which meant that businesses on AWS EC2 platform and Microsoft's Business Productivity Online Suite went offline
+
+9. Hurricane Sandy floods data center basements; The Huffington Post, Gawker, Gizmodo and Buzzfeed went offline after a the basement flooded at a data centre hosted by Datagram during Hurricane Sandy. Similarly, many leading telecoms firms such as Verizon were left without power during one of the worst storms in US history.
+http://www.computerworlduk.com/galleries/infrastructure/ten-datacentre-disasters-that-brought-firms-offline-3593580/#6
+
+10. Storms rock HBOS
+HBOS - the banking firm which owns Halifax and Bank of Scotland - was unable to offer customers cash-machine, over-the-counter or online services for six hours when a storm struck its Yorkshire-based data centre in November 2009.
+http://www.computerworlduk.com/galleries/infrastructure/ten-datacentre-disasters-that-brought-firms-offline-3593580/#9

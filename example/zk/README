@@ -1,3 +1,4 @@
-You can download ZooKeeper software from here: https://github.com/apache/zookeeper/releases We tested the 3.4.8 version which can be downloaded here: https://github.com/apache/zookeeper/releases/tag/release-3.4.8
+You can download ZooKeeper software from here: https://github.com/apache/zookeeper/releases
+We tested the 3.4.8 version which can be downloaded here: https://github.com/apache/zookeeper/releases/tag/release-3.4.8
 
 You can download the Kazoo client by running 'pip install kazoo'. 

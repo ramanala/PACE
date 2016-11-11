@@ -28,7 +28,6 @@ import pickle
 import pacedefaultexplorer
 import pacersmexplorer
 import bruteforceexplorer
-import adhocexplorer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checker', required = True, help = 'Location of the checker')
@@ -41,9 +40,7 @@ parser.add_argument('--ignore_mmap', type = bool, default = True)
 parser.add_argument('--ignore_stacktrace', type = bool, default = True)
 parser.add_argument('--ignore_file_read', type = bool, default = True)
 parser.add_argument('--scratchpad_base', type = str)
-parser.add_argument('--rsm', dest='is_rsm', action='store_true')
-parser.add_argument('--non-rsm', dest='is_rsm', action='store_false')
-parser.set_defaults(is_rsm=True)
+parser.add_argument('--explore', dest='explore', action='store', choices=['rsm','non-rsm','bruteforce'], help='Type of exploration strategy', required = True)
 
 args = parser.parse_args()
 args.checker = os.path.abspath(args.checker)
@@ -129,7 +126,10 @@ for trace_dir in args.trace_dirs:
 	pace_configs.append(pace_config)
 	index += 1
 
-if args.is_rsm:
+if args.explore == 'rsm':
 	pacersmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
+elif args.explore == 'non-rsm':
+	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
 else:
+	assert args.explore == 'bruteforce'
 	bruteforceexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)

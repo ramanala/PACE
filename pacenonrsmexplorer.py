@@ -79,13 +79,13 @@ class MultiThreadedChecker(threading.Thread):
 		MultiThreadedChecker.queue.join()
 		return MultiThreadedChecker.outputs
 
-def __get_crash_point_id_string(crash_point):
+def get_crash_point_id_string(crash_point):
 	toret = ""
 	for i in range(0, len(crash_point)):
 		c = crash_point[i]
 		
 		if c == -1:
-			c = 'z'
+			c = 'z' # the node has not done any persistent state update
 			
 		if i < len(crash_point)-1:
 			toret += str(c) + "-"
@@ -96,16 +96,16 @@ def __get_crash_point_id_string(crash_point):
 def dict_value_product(dicts):
 	return (dict(zip(dicts, x)) for x in itertools.product(*dicts.itervalues()))
 
-def __atleast_one_present(machines, currs, ends):
+def atleast_one_present(machines, currs, ends):
 	for m in machines:
 		if currs[m] < len(ends[m]):
 			return True
 	return False
 
-def replay_dir_base_name_RO(failure_mode, crash_point, omit_pt):
+def replay_dir_base_name_RO(crash_point, omit_pt):
 	assert type(omit_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point)
-	base_name += "_" + str(failure_mode) + "_RO"
+	base_name = get_crash_point_id_string(crash_point)
+	base_name += "_RO"
 
 	def dict_string(d):
 		toret = ''
@@ -116,10 +116,9 @@ def replay_dir_base_name_RO(failure_mode, crash_point, omit_pt):
 	base_name += "_OM" + dict_string(omit_pt)
 	return base_name
 
-def replay_dir_base_name_ARO(failure_mode, crash_point, omit_pt):
+def replay_dir_base_name_ARO(crash_point, omit_pt):
 	assert type(omit_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point) 
-	base_name += "_" + str(failure_mode) 
+	base_name = get_crash_point_id_string(crash_point) 
 
 	def dict_string(d):
 		toret = ''
@@ -132,7 +131,7 @@ def replay_dir_base_name_ARO(failure_mode, crash_point, omit_pt):
 
 def replay_dir_base_name_AP(crash_point, end_pt):
 	assert type(end_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point) 
+	base_name = get_crash_point_id_string(crash_point) 
 
 	def dict_string(d):
 		toret = ''
@@ -143,18 +142,18 @@ def replay_dir_base_name_AP(crash_point, end_pt):
 	base_name += "_AP" + dict_string(end_pt)
 	return base_name
 
-def _append_or_trunc_ops(replayer, machines, crash_point):
+def append_or_trunc_ops(replayer, machines, crash_point):
 	toret = {}
 	for machine in machines:
 		curr_op = replayer.micro_ops[machine][crash_point[machine]].op
-		toret[machine] =  curr_op == 'append' or curr_op == 'trunc' or curr_op == 'write'
+		toret[machine] =  curr_op == 'append' or curr_op == 'trunc' 
 	return toret
 
 def nCr(n,r):
 	func = math.factorial
 	return func(n) / func(r) / func(n-r)
 
-def __get_replay_dirs(machines, base_name):
+def get_replay_dirs(machines, base_name):
 	dirnames = {}
 	base_path = os.path.join(paceconfig(0).scratchpad_dir, base_name)
 	for machine in machines:
@@ -167,7 +166,7 @@ def __get_replay_dirs(machines, base_name):
 			stdout_files[machine_id] = os.path.join(base_path, str(machine_id) + '.input_stdout')
 	return (base_path, dirnames,stdout_files) 
 
-def unique_gvp(gvps, machines, filter_machines):
+def unique_grp(grps, machines, filter_machines):
 	assert len(machines) > 0 and len(filter_machines) < len(machines)
 	to_ret = []
 	to_ret_set = set()
@@ -175,9 +174,8 @@ def unique_gvp(gvps, machines, filter_machines):
 	temp = {}
 	max_for_state = defaultdict(lambda:-1, temp)
 
-	for state in gvps:
+	for state in grps:
 		state_arr = list(state)
-		print state_arr
 		for machine in machines:
 			if machine not in filter_machines:
 				val = state_arr[machine]
@@ -190,26 +188,6 @@ def unique_gvp(gvps, machines, filter_machines):
 				state_arr.insert(machine, max_for_state[tuple(state_arr)])
 		to_ret_set.add(tuple(state_arr))	
 	return to_ret_set
-
-def __get_workload_range(pace_configs, pace_conf_file, interesting_prefix_states):
-	pace_conf = []
-	with open(pace_conf_file, "r") as f:
-		pace_conf = pickle.load(f)
-	assert len(pace_conf.keys()) == len(pace_configs)
-	
-	workload_range = []
-	for state in interesting_prefix_states:
-		belongs = True
-		for key in pace_conf.keys():
-			if not (state[key] >= pace_conf[key][0] and state[key] <= pace_conf[key][1]):
-				belongs = False
-				break
-
-		if belongs:
-			workload_range.append(state)
-
-	print 'Getting workload range : ' + str(len(workload_range)) 
-	return workload_range
 
 def check_logically_same(to_omit_list):
 	ops_eq = all(x.op == to_omit_list[0].op for x in to_omit_list)
@@ -230,32 +208,35 @@ def check_logically_same(to_omit_list):
 	else:
 		return False
 
-def __get_interesting_prefixes(replayer):
-	print 'Getting interesting states'
+def compute_reachable_global_prefixes(replayer):
+	print 'Computing globally reachable prefix states'
 	assert paceconfig(0).cached_prefix_states_file is not None and len(paceconfig(0).cached_prefix_states_file) > 0
 	prefix_cached_file = paceconfig(0).cached_prefix_states_file
 
 	interesting_prefix_states = []
-	final_interesting_states_reorder = set()
-	ins_start = time.time()
+	final_reachable_prefix_fsync_deps = set()
 		
 	if not os.path.isfile(prefix_cached_file):
-		print 'No cached file. Will compute GVP.'
-		product_producers = replayer.ops_indexes()
-		base_lists = product_producers.values()
+		print 'No cached file. Computing reachable prefixes from scratch.'
+		base_lists = replayer.ops_indexes().values()
+		
 		list0 = base_lists[0]
 		list1 = base_lists[1]
 		interesting_prefix_states = []
-		cross_prod = reduce(lambda x,y: x*y, map(len, base_lists))
-		print 'Cross product : ' + str(cross_prod)
+
+		# Algorithm to find all consistent cuts of persistent states: 
+		# Naive method: Let us say there are 3 machines. Consider that the number of events
+		# in these traces from three machines as <n1, n2, n3>. So, there are n1 X n2 X n3
+		# ways in which these traces could combine.
+		# Should we check for everything?
+		# No, we can do better; intuition: if i X j is not consistent then any superset of
+		# it <i, j , k> for any k is inconsistent.
 		
 		for index1 in list0:
 			for index2 in list1:
 				if replayer.is_legal_gp((index1, index2)):
 					interesting_prefix_states.append((index1, index2))
 								
-		print 'Pair completed : ' +str(len(interesting_prefix_states))
-		
 		for i in range(2, len(base_lists)):
 			interesting_prefix_cache = []
 			for index in base_lists[i]:
@@ -272,37 +253,46 @@ def __get_interesting_prefixes(replayer):
 				candidate.append(replayer.persistent_op_index(index, point))
 				index += 1
 			candidate = tuple(candidate)
-			final_interesting_states_reorder.add(candidate)
+			final_reachable_prefix_fsync_deps.add(candidate)
 				
 		with open(prefix_cached_file, "w") as f:
-			pickle.dump(final_interesting_states_reorder, f, protocol = 0)
+			pickle.dump(final_reachable_prefix_fsync_deps, f, protocol = 0)
 	else:
-		print 'Using cached prefix states file'
+		print 'Using cached globally reachable states'
 		with open(prefix_cached_file, "r") as f:
-			final_interesting_states_reorder = pickle.load(f)
+			final_reachable_prefix_fsync_deps = pickle.load(f)
 
+	final_reachable_prefix_no_deps = set(list(final_reachable_prefix_fsync_deps)[:])
+	assert not bool(final_reachable_prefix_no_deps.symmetric_difference(final_reachable_prefix_fsync_deps))
+	
+	# We are mostly done here. But there is one more optimization that we could do.
+	# if a trace ends with fsync or fdatasync, then it can be skipped for replay 
+	# because there is no specific operation that we need to replay fsyncs. However,
+	# they are important to calculate FS reordering dependencies. So, we maintain
+	# two sets: one with fsync deps (we will use when we apply FS reordering),
+	# one with no fsync deps that we will use to replay globally reachable prefixes
 
-	final_interesting_states_other = set(list(final_interesting_states_reorder)[:])
-	interesting_states_check = set(list(final_interesting_states_reorder)[:])
+	interesting_states_check = set(list(final_reachable_prefix_fsync_deps)[:])
 	for state in interesting_states_check:
 		machine = 0
 		for end_point in state:
 			if replayer.micro_ops[machine][end_point].op == 'fsync' or replayer.micro_ops[machine][end_point].op == 'fdatasync' or\
 				replayer.micro_ops[machine][end_point].op == 'file_sync_range':
 				prev_point = replayer.get_prev_op(state)
-				# if subsumed by another GVP, just remove this. If not subsumed, leave it
+				# if subsumed by another GRP, just remove this. If not subsumed, leave it
 				if prev_point in interesting_states_check:
-					final_interesting_states_other.remove(state)
+					final_reachable_prefix_no_deps.remove(state)
 				break
 			machine += 1
 
-	ins_end = time.time()
-	assert final_interesting_states_reorder is not None and len(final_interesting_states_reorder) > 0
-	assert final_interesting_states_other is not None and len(final_interesting_states_other) > 0
-	return (final_interesting_states_reorder, final_interesting_states_other)
+	assert final_reachable_prefix_fsync_deps is not None and len(final_reachable_prefix_fsync_deps) > 0
+	assert final_reachable_prefix_no_deps is not None and len(final_reachable_prefix_no_deps) > 0
+	assert final_reachable_prefix_no_deps <= final_reachable_prefix_fsync_deps
 
-def globally_valid_prefix(replayer, interesting_prefix_states, replay = True):
-	print 'Producing prefix crash states...' 
+	return (final_reachable_prefix_fsync_deps, final_reachable_prefix_no_deps)
+
+def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay = True):
+	print 'Checking prefix crash states...' 
 	machines = replayer.conceptual_machines()
 
 	replay_start = time.time()
@@ -310,17 +300,22 @@ def globally_valid_prefix(replayer, interesting_prefix_states, replay = True):
 	for crash_point in interesting_prefix_states:
 		assert len(crash_point) == len(machines)
 		
-		base_name = __get_crash_point_id_string(crash_point)
-		base_name += "_GVP"
+		base_name = get_crash_point_id_string(crash_point)
+		base_name += "_GRP"
 		
 		for machine in machines:
 			replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
 
 		if replay:
-			(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+			(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 			replayer.construct_crashed_dirs(dirnames, stdout_files)
-			MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], __get_crash_point_id_string(crash_point))
+			MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], get_crash_point_id_string(crash_point))
 		count += 1
+
+		#if count == 1:
+		#	print 'Done'
+		#	MultiThreadedChecker.wait_and_get_outputs()
+		#	return
 			
 	if replay: 
 		MultiThreadedChecker.wait_and_get_outputs()
@@ -330,63 +325,75 @@ def globally_valid_prefix(replayer, interesting_prefix_states, replay = True):
 	print 'Prefix states : ' + str(count)
 	print 'Prefix replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def atomicity_prefix_correlated(replayer, interesting_prefix_states, client_index, replay = True):
+def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, client_index, replay = True):
 	machines = replayer.conceptual_machines()
 	fs_ops = replayer.fs_ops_indexes()	
 	server_machines = machines[:]
 	server_machines.remove(client_index)
 	server_count = len(server_machines)
+	majority_count = int(len(server_machines) / 2) + 1
+	assert server_count == 3 and majority_count == 2
 	
 	count = 0
+	how_many_majorities = 1
+	pick_server_count = majority_count
+
 	replay_start = time.time()
+			
 	replayer.set_environment(defaultfs('count', 3), defaultnet(), load_cross_deps = False)
 
-	apm_imposed_subset_machineset = []
-	for pick_count in range(1, len(server_machines) + 1):
-		apm_imposed_subset_machineset += list(itertools.combinations(server_machines, pick_count))
+	apm_imposed_subset_machineset = list(itertools.combinations(server_machines, pick_server_count))	
+	assert len(apm_imposed_subset_machineset) == nCr(server_count, majority_count)
+	apm_imposed_subset_machineset = apm_imposed_subset_machineset[0:how_many_majorities]
+	assert len(apm_imposed_subset_machineset) == 1
 
-	print apm_imposed_subset_machineset
+	apm_imposed_machines = apm_imposed_subset_machineset[0]
+
 	for machine in machines:
 		replayer.load(machine, 0)
 
-	for apm_imposed_machines in apm_imposed_subset_machineset:
-		for crash_point in interesting_prefix_states:
-			atomic_ends = {}
-			atomic_currs = {}
-			machine = 0
-			for end_point in crash_point:
+	for crash_point in interesting_prefix_states:
+		atomic_ends = {}
+		atomic_currs = {}
+		machine = 0
+		for end_point in crash_point:
+			if machine in apm_imposed_machines:
+				atomic_ends[machine] = range(0, replayer.iops_len(machine, end_point)) 
+				atomic_currs[machine] = 0 
+			machine += 1
+
+		atomic_end_list = []
+		while atleast_one_present(apm_imposed_machines, atomic_currs, atomic_ends):
+			atomic_end = {}
+			for machine in apm_imposed_machines:
+				if atomic_currs[machine] < len(atomic_ends[machine]):
+					atomic_end[machine] = atomic_ends[machine][atomic_currs[machine]]
+				else:
+					atomic_end[machine] = atomic_ends[machine][len(atomic_ends[machine])-1]
+
+				atomic_currs[machine] += 1
+			atomic_end_list.append(atomic_end)
+	
+		for atomic_end in atomic_end_list:
+			for machine in server_machines:
 				if machine in apm_imposed_machines:
-					atomic_ends[machine] = range(0, replayer.iops_len(machine, end_point)) 
-					atomic_currs[machine] = 0 
-				machine += 1
-
-			atomic_end_list = []
-			while __atleast_one_present(apm_imposed_machines, atomic_currs, atomic_ends):
-				atomic_end = {}
-				for machine in apm_imposed_machines:
-					if atomic_currs[machine] < len(atomic_ends[machine]):
-						atomic_end[machine] = atomic_ends[machine][atomic_currs[machine]]
-					else:
-						atomic_end[machine] = atomic_ends[machine][len(atomic_ends[machine])-1]
-
-					atomic_currs[machine] += 1
-				atomic_end_list.append(atomic_end)
+					replayer.iops_end_at(machine, (crash_point[machine], atomic_end[machine]))
+				else:
+					replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
+				
+			replayer.iops_end_at(client_index, (crash_point[client_index], replayer.iops_len(client_index, crash_point[client_index]) - 1))
+			base_name = replay_dir_base_name_AP(crash_point, atomic_end)
+			count += 1
 		
-			for atomic_end in atomic_end_list:
-				for machine in server_machines:
-					if machine in apm_imposed_machines:
-						replayer.iops_end_at(machine, (crash_point[machine], atomic_end[machine]))
-					else:
-						replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
-					
-				replayer.iops_end_at(client_index, (crash_point[client_index], replayer.iops_len(client_index, crash_point[client_index]) - 1))
-				base_name = replay_dir_base_name_AP(crash_point, atomic_end)
-				count += 1
-			
-				if replay:
-					(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
-					replayer.construct_crashed_dirs(dirnames, stdout_files)
-					MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
+			if replay:
+				(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
+				replayer.construct_crashed_dirs(dirnames, stdout_files)
+				MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
+
+				#if count == 1:
+				#	print 'Done'
+				#	MultiThreadedChecker.wait_and_get_outputs()
+				#	return
 
 	if replay:		
 		MultiThreadedChecker.wait_and_get_outputs()
@@ -396,8 +403,7 @@ def atomicity_prefix_correlated(replayer, interesting_prefix_states, client_inde
 	print 'Atomicity Prefix correlated states : ' + str(count)
 	print 'Atomicity Prefix correlated replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def reordering_correlated(replayer, interesting_prefix_states, client_index, replay = True):
-	failure_mode = 'brute'
+def replay_correlated_reordering(replayer, interesting_prefix_states, client_index, replay = True):
 	def end_highest_so_far(machine, curr_endpoint):
 		machine_dict = can_omit_for_machine_endpoint[machine]
 		maximum = -1
@@ -413,6 +419,9 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, rep
 	server_machines = machines[:]
 	server_machines.remove(client_index)
 	server_count = len(server_machines)
+	majority_count = int(len(server_machines) / 2) + 1
+	# For now assert for 3 and 2 :)
+	assert server_count == 3 and majority_count == 2
 	
 	for machine in machines:
 		can_omit_ops[machine] = defaultdict(list)
@@ -425,7 +434,7 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, rep
 		replayer.load(machine, 0)
 
 	# Phase 1: See what all ops can be dropped for each end point in a machine 
-	# For example, let's say the GVP is (x, y, z). For x in machine0, there can
+	# For example, let's say the GRP is (x, y, z). For x in machine0, there can
 	# be multiple ops that are before x and can still be dropped when we end at x
 	# For example, consider the follwing:
 	# x-2: creat(file)
@@ -468,13 +477,14 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, rep
 	# It *has* to be valid state as the local drop points have been checked for this condition.
 
 	reordering_count = 0
+	pick_server_count = -1
+	how_many_majorities = 1
+	pick_server_count = majority_count
 
-	apm_imposed_subset_machineset = []
-	for pick_count in range(1, len(server_machines) + 1):
-		apm_imposed_subset_machineset += list(itertools.combinations(server_machines, pick_count))
-
-	print apm_imposed_subset_machineset
-
+	apm_imposed_subset_machineset = list(itertools.combinations(server_machines, pick_server_count))
+	assert len(apm_imposed_subset_machineset) == nCr(server_count, majority_count)
+	apm_imposed_subset_machineset = apm_imposed_subset_machineset[0:how_many_majorities]
+	
 	for apm_imposed_machines in apm_imposed_subset_machineset:
 		for crash_point in interesting_prefix_states:
 			omittables = {}
@@ -491,16 +501,21 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, rep
 				for mac in omit_pt.keys():
 					curr_omit = omit_pt[mac]
 					to_omit_list.append(replayer.micro_ops[mac][curr_omit])
-				
+			
 				if check_logically_same(to_omit_list):
 					reordering_count += 1
 					replayer.mops_omit_group(omit_pt)
-					base_name = replay_dir_base_name_RO(failure_mode, crash_point, omit_pt)
+					base_name = replay_dir_base_name_RO(crash_point, omit_pt)
 				
 					if replay:
-						(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+						(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
+
+						#if reordering_count == 1:
+						#	print 'Done'
+						#	MultiThreadedChecker.wait_and_get_outputs()
+						#	return
 					replayer.mops_include_group(omit_pt)
 
 			del omittables
@@ -510,40 +525,40 @@ def reordering_correlated(replayer, interesting_prefix_states, client_index, rep
 		MultiThreadedChecker.wait_and_get_outputs()
 		
 	replay_end = time.time()
-	print 'Reordering correlated ' + failure_mode + ' states : ' + str(reordering_count)
-	print 'Reordering correlated ' + failure_mode + ' replay took approx ' + str(replay_end-replay_start) + ' seconds...'
+	print 'Reordering correlated states : ' + str(reordering_count)
+	print 'Reordering correlated replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def atomicity_reordering_correlated(replayer, interesting_prefix_states, client_index, replay = False):
-	failure_mode = 'brute'
+def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, client_index, replay = True):
 	machines = replayer.conceptual_machines()
 	fs_ops = replayer.fs_ops_indexes()	
 	can_omit_ops = {}
 	server_machines = machines[:]
 	server_machines.remove(client_index)
 	server_count = len(server_machines)
+	majority_count = int(len(server_machines) / 2) + 1
+	assert server_count == 3 and majority_count == 2
 
 	atomicity_reordering_count = 0
+	pick_server_count = majority_count
+	how_many_majorities = 1
+
 	replay_start = time.time()
 			
 	replayer.set_environment(defaultfs('count', 3), defaultnet(), load_cross_deps = False)
+	apm_imposed_subset_machineset = list(itertools.combinations(server_machines, pick_server_count))
+	assert len(apm_imposed_subset_machineset) == nCr(server_count, majority_count)
+	apm_imposed_subset_machineset = apm_imposed_subset_machineset[0:how_many_majorities]
 	
-	
-	apm_imposed_subset_machineset = []
-	for pick_count in range(1, len(server_machines) + 1):
-		apm_imposed_subset_machineset += list(itertools.combinations(server_machines, pick_count))
-
-	print apm_imposed_subset_machineset
-
 	for machine in machines:
 		replayer.load(machine, 0)
 
 	for apm_imposed_machines in apm_imposed_subset_machineset:
 		for crash_point in interesting_prefix_states:
 
-			append_trunc_indexes = _append_or_trunc_ops(replayer, server_machines, crash_point)
+			append_trunc_indexes = append_or_trunc_ops(replayer, server_machines, crash_point)
 			if any(append_trunc_indexes.values()):
 
-				# First, end all machine at the GVP point
+				# First, end all machine at the GRP point
 				machine = 0
 				for machine in machines:
 					replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
@@ -566,7 +581,7 @@ def atomicity_reordering_correlated(replayer, interesting_prefix_states, client_
 					machine +=1
 
 				atomic_omit_list = []
-				while __atleast_one_present(apm_imposed_machines, atomic_ro_currs, atomic_omits):
+				while atleast_one_present(apm_imposed_machines, atomic_ro_currs, atomic_omits):
 					atomic_omit = {}
 					for machine in apm_imposed_machines:
 						if atomic_ro_currs[machine] < len(atomic_omits[machine]):
@@ -590,34 +605,41 @@ def atomicity_reordering_correlated(replayer, interesting_prefix_states, client_
 						base_name_prep[mac] = (crash_point[mac], iop_index)
 
 					replayer.iops_omit_group(atomic_omit)
-					base_name = replay_dir_base_name_ARO(failure_mode, crash_point, base_name_prep)
+					base_name = replay_dir_base_name_ARO(crash_point, base_name_prep)
 					atomicity_reordering_count += 1
 					
 					if replay:
-						(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+						(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
+
+						#if atomicity_reordering_count == 1:
+						#	print 'Done'
+						#	MultiThreadedChecker.wait_and_get_outputs()
+						#	return
+
 					replayer.iops_include_group(atomic_omit)
 		
 	if replay:		
 		MultiThreadedChecker.wait_and_get_outputs()
 		
 	replay_end = time.time()
-	print 'Atomicity reordering correlated ' + failure_mode + ' states : ' + str(atomicity_reordering_count)
-	print 'Atomicity reordering correlated ' + failure_mode + ' replay took approx ' + str(replay_end-replay_start) + ' seconds...'
+	print 'Atomicity reordering correlated states : ' + str(atomicity_reordering_count)
+	print 'Atomicity reordering correlated replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
 def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False):
 	print 'Parsing traces to determine logical operations ...'
-	uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
 
+	#initialize the replayer
 	replayer = DSReplayer(pace_configs, sock_config)
-	replayer.set_environment(defaultfs('count', 1), defaultnet(), load_cross_deps = True)
-	replayer.print_ops(show_io_ops = True)
-	client_index = replayer.client_index
 
-	pace_conf_file = os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'pace_conf')
-	assert os.path.exists(pace_conf_file), "Hint: Run the prot tool to produce pace_conf file!"
-	
+	#set the environment - what file system (defaultfs)? what network(defaultnet)? 
+	replayer.set_environment(defaultfs('count', 1), defaultnet(), load_cross_deps = True)
+
+	#did we parse and understand? if yes, print.
+	replayer.print_ops(show_io_ops = True)
+	print 'Successfully parsed logical operations!'
+
 	if replay == False:
 		return
 	
@@ -626,25 +648,23 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 		t = MultiThreadedChecker(MultiThreadedChecker.queue, i)
 		t.setDaemon(True)
 		t.start()
-		
-	(interesting_prefix_states_reorder, interesting_prefix_states_other) = __get_interesting_prefixes(replayer)
-	workload_range = __get_workload_range(pace_configs, pace_conf_file, interesting_prefix_states_reorder)
+	
+	(reachable_prefix_fsync_deps, reachable_prefix_no_deps) = compute_reachable_global_prefixes(replayer)
 
-	mode = 'RSM'
-
-	MultiThreadedChecker.reset()
-	globally_valid_prefix(replayer, interesting_prefix_states_other, False)
+	grps_0_1_no_deps = unique_grp(reachable_prefix_no_deps, replayer.conceptual_machines(), [0,1])
+	grps_0_1_fsync_deps  = unique_grp(reachable_prefix_fsync_deps, replayer.conceptual_machines(), [0,1])
 	
 	MultiThreadedChecker.reset()
-	atomicity_prefix_correlated(replayer, interesting_prefix_states_other, client_index, False)
+	replay_correlated_global_prefix(replayer, grps_0_1_no_deps, True)
 
-	if mode == 'RSM':
-		MultiThreadedChecker.reset()
-		reordering_correlated(replayer, interesting_prefix_states_reorder, client_index, False)
+	MultiThreadedChecker.reset()
+	replay_correlated_reordering(replayer, grps_0_1_fsync_deps, replayer.client_index, True)
 
-		MultiThreadedChecker.reset()
-		atomicity_reordering_correlated(replayer, interesting_prefix_states_other, client_index, False)
-	else:		
-		assert False
+	MultiThreadedChecker.reset()
+	replay_correlated_atomicity_reordering(replayer, grps_0_1_no_deps, replayer.client_index, True)
 
+	MultiThreadedChecker.reset()
+	replay_correlated_atomicity_prefix(replayer, grps_0_1_no_deps, replayer.client_index,  True)
+
+	uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
 	os.system('cp ' + os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'micro_ops') + ' ' + paceconfig(0).scratchpad_dir)

@@ -298,7 +298,7 @@ def __compute_reachable_global_prefixes(replayer):
 	return (final_reachable_prefix_fsync_deps, final_reachable_prefix_no_deps)
 
 def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay = True):
-	print 'Producing prefix crash states...' 
+	print 'Checking prefix crash states...' 
 	machines = replayer.conceptual_machines()
 
 	replay_start = time.time()
@@ -307,7 +307,7 @@ def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay 
 		assert len(crash_point) == len(machines)
 		
 		base_name = __get_crash_point_id_string(crash_point)
-		base_name += "_GVP"
+		base_name += "_GRP"
 		
 		for machine in machines:
 			replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
@@ -334,7 +334,6 @@ def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, clie
 	server_machines.remove(client_index)
 	server_count = len(server_machines)
 	majority_count = int(len(server_machines) / 2) + 1
-	# For now assert for 3 and 2 :)
 	assert server_count == 3 and majority_count == 2
 	
 	count = 0

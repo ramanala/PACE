@@ -104,6 +104,10 @@ To check for vulnerabilities, just do ./run.sh True. When you do this, PACE will
 
 Note: it is a good idea to specify the scratchpad_base as a directory on a tmpfs file system so that PACE can quickly write the crash states and the checker can quickly read the same. Also, if there are many states, PACE can take many hours to complete the checking.    
 
+If you take a closer look at the zookeeper checker script, you can see that it performs some queries on the state supplied by PACE: it first starts the zookeeper cluster using the correlated crash state produced by PACE, then it invokes a client to perform checking on the data updated by the workload, finally it dumps debug information into a file called "checkresult" in the crash state directory. You can post process all the checkresult files (a simple grep after you see the contents of the checkresult file) to see if there are vulnerabilities. In the near future, we will make these simple result processing scripts also public.   
+
+Aside: PACE's code intentionally asserts conditions profusely. So, PACE will never report false vulnerabilities silently (though it may miss to find vulnerabilities by design). PACE will just assert and stop if anything seems wrong in the trace or anywhere in this entire pipeline.   
+
 ## 3. Caveats and limitations
 
 PACE is not complete – it can miss vulnerabilities. Specifically, PACE exercises only one and the same reordering

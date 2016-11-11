@@ -73,7 +73,7 @@ for port in lines[1].split(','):
 assert len(ips) == len(args.trace_dirs)
 
 assert 'client_index' in lines[2]
-lines[2]=lines[2].replace('client_index:', '').replace('\n','')
+lines[2] = lines[2].replace('client_index:', '').replace('\n','')
 client_index = int(lines[2])
 assert client_index < len(ips)
 

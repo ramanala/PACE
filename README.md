@@ -112,7 +112,7 @@ Aside: PACE's code intentionally asserts conditions profusely. So, PACE will nev
 
 ## 3. Testing new systems
 
-To test a new system, you can simply follow the same pattern as ZooKeeper. One tricky thing might be to use the correct LD_PRELOAD binaries. 
+To test a new system, you can simply follow the same pattern as ZooKeeper (init, workload, checker). More on rsm and non-rsm -- non-rsm rules. 
 
 ## 4. Caveats and limitations
 

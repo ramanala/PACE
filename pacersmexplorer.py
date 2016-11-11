@@ -79,7 +79,7 @@ class MultiThreadedChecker(threading.Thread):
 		MultiThreadedChecker.queue.join()
 		return MultiThreadedChecker.outputs
 
-def __get_crash_point_id_string(crash_point):
+def get_crash_point_id_string(crash_point):
 	toret = ""
 	for i in range(0, len(crash_point)):
 		c = crash_point[i]
@@ -96,7 +96,7 @@ def __get_crash_point_id_string(crash_point):
 def dict_value_product(dicts):
 	return (dict(zip(dicts, x)) for x in itertools.product(*dicts.itervalues()))
 
-def __atleast_one_present(machines, currs, ends):
+def atleast_one_present(machines, currs, ends):
 	for m in machines:
 		if currs[m] < len(ends[m]):
 			return True
@@ -104,7 +104,7 @@ def __atleast_one_present(machines, currs, ends):
 
 def replay_dir_base_name_RO(failure_mode, crash_point, omit_pt):
 	assert type(omit_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point)
+	base_name = get_crash_point_id_string(crash_point)
 	base_name += "_" + str(failure_mode) + "_RO"
 
 	def dict_string(d):
@@ -118,7 +118,7 @@ def replay_dir_base_name_RO(failure_mode, crash_point, omit_pt):
 
 def replay_dir_base_name_ARO(failure_mode, crash_point, omit_pt):
 	assert type(omit_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point) 
+	base_name = get_crash_point_id_string(crash_point) 
 	base_name += "_" + str(failure_mode) 
 
 	def dict_string(d):
@@ -132,7 +132,7 @@ def replay_dir_base_name_ARO(failure_mode, crash_point, omit_pt):
 
 def replay_dir_base_name_AP(crash_point, end_pt):
 	assert type(end_pt) == dict
-	base_name = __get_crash_point_id_string(crash_point) 
+	base_name = get_crash_point_id_string(crash_point) 
 
 	def dict_string(d):
 		toret = ''
@@ -143,7 +143,7 @@ def replay_dir_base_name_AP(crash_point, end_pt):
 	base_name += "_AP" + dict_string(end_pt)
 	return base_name
 
-def _append_or_trunc_ops(replayer, machines, crash_point):
+def append_or_trunc_ops(replayer, machines, crash_point):
 	toret = {}
 	for machine in machines:
 		curr_op = replayer.micro_ops[machine][crash_point[machine]].op
@@ -154,7 +154,7 @@ def nCr(n,r):
 	func = math.factorial
 	return func(n) / func(r) / func(n-r)
 
-def __get_replay_dirs(machines, base_name):
+def get_replay_dirs(machines, base_name):
 	dirnames = {}
 	base_path = os.path.join(paceconfig(0).scratchpad_dir, base_name)
 	for machine in machines:
@@ -209,7 +209,7 @@ def check_logically_same(to_omit_list):
 	else:
 		return False
 
-def __compute_reachable_global_prefixes(replayer):
+def compute_reachable_global_prefixes(replayer):
 	print 'Computing globally reachable prefix states'
 	assert paceconfig(0).cached_prefix_states_file is not None and len(paceconfig(0).cached_prefix_states_file) > 0
 	prefix_cached_file = paceconfig(0).cached_prefix_states_file
@@ -280,7 +280,7 @@ def __compute_reachable_global_prefixes(replayer):
 			if replayer.micro_ops[machine][end_point].op == 'fsync' or replayer.micro_ops[machine][end_point].op == 'fdatasync' or\
 				replayer.micro_ops[machine][end_point].op == 'file_sync_range':
 				prev_point = replayer.get_prev_op(state)
-				# if subsumed by another GVP, just remove this. If not subsumed, leave it
+				# if subsumed by another GRP, just remove this. If not subsumed, leave it
 				if prev_point in interesting_states_check:
 					final_reachable_prefix_no_deps.remove(state)
 				break
@@ -301,16 +301,16 @@ def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay 
 	for crash_point in interesting_prefix_states:
 		assert len(crash_point) == len(machines)
 		
-		base_name = __get_crash_point_id_string(crash_point)
+		base_name = get_crash_point_id_string(crash_point)
 		base_name += "_GRP"
 		
 		for machine in machines:
 			replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
 
 		if replay:
-			(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+			(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 			replayer.construct_crashed_dirs(dirnames, stdout_files)
-			MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], __get_crash_point_id_string(crash_point))
+			MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], get_crash_point_id_string(crash_point))
 		count += 1
 			
 	if replay: 
@@ -369,7 +369,7 @@ def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, clie
 			machine += 1
 
 		atomic_end_list = []
-		while __atleast_one_present(apm_imposed_machines, atomic_currs, atomic_ends):
+		while atleast_one_present(apm_imposed_machines, atomic_currs, atomic_ends):
 			atomic_end = {}
 			for machine in apm_imposed_machines:
 				if atomic_currs[machine] < len(atomic_ends[machine]):
@@ -392,7 +392,7 @@ def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, clie
 			count += 1
 		
 			if replay:
-				(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+				(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 				replayer.construct_crashed_dirs(dirnames, stdout_files)
 				MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
 
@@ -437,7 +437,7 @@ def replay_correlated_reordering(replayer, interesting_prefix_states, client_ind
 		replayer.load(machine, 0)
 
 	# Phase 1: See what all ops can be dropped for each end point in a machine 
-	# For example, let's say the GVP is (x, y, z). For x in machine0, there can
+	# For example, let's say the GRP is (x, y, z). For x in machine0, there can
 	# be multiple ops that are before x and can still be dropped when we end at x
 	# For example, consider the follwing:
 	# x-2: creat(file)
@@ -518,7 +518,7 @@ def replay_correlated_reordering(replayer, interesting_prefix_states, client_ind
 					base_name = replay_dir_base_name_RO(failure_mode, crash_point, omit_pt)
 				
 					if replay:
-						(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+						(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
 					replayer.mops_include_group(omit_pt)
@@ -571,10 +571,10 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 	for apm_imposed_machines in apm_imposed_subset_machineset:
 		for crash_point in interesting_prefix_states:
 
-			append_trunc_indexes = _append_or_trunc_ops(replayer, server_machines, crash_point)
+			append_trunc_indexes = append_or_trunc_ops(replayer, server_machines, crash_point)
 			if any(append_trunc_indexes.values()):
 
-				# First, end all machine at the GVP point
+				# First, end all machine at the GRP point
 				machine = 0
 				for machine in machines:
 					replayer.iops_end_at(machine, (crash_point[machine], replayer.iops_len(machine, crash_point[machine]) - 1))
@@ -597,7 +597,7 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 					machine +=1
 
 				atomic_omit_list = []
-				while __atleast_one_present(apm_imposed_machines, atomic_ro_currs, atomic_omits):
+				while atleast_one_present(apm_imposed_machines, atomic_ro_currs, atomic_omits):
 					atomic_omit = {}
 					for machine in apm_imposed_machines:
 						if atomic_ro_currs[machine] < len(atomic_omits[machine]):
@@ -625,7 +625,7 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 					atomicity_reordering_count += 1
 					
 					if replay:
-						(base_path, dirnames,stdout_files) = __get_replay_dirs(machines, base_name)
+						(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
 					replayer.iops_include_group(atomic_omit)
@@ -639,12 +639,15 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 
 def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False):
 	print 'Parsing traces to determine logical operations ...'
-	uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
 
+	#initialize the replayer
 	replayer = DSReplayer(pace_configs, sock_config)
-	replayer.set_environment(defaultfs('count', 1), defaultnet(), load_cross_deps = True)
-	replayer.print_ops(show_io_ops = True)
 
+	#set the environment - what file system (defaultfs)? what network(defaultnet)? 
+	replayer.set_environment(defaultfs('count', 1), defaultnet(), load_cross_deps = True)
+
+	#did we parse and understand? if yes, print.
+	replayer.print_ops(show_io_ops = True)
 	print 'Successfully parsed logical operations!'
 
 	if replay == False:
@@ -656,7 +659,7 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 		t.setDaemon(True)
 		t.start()
 	
-	(reachable_prefix_fsync_deps, reachable_prefix_no_deps) = __compute_reachable_global_prefixes(replayer)
+	(reachable_prefix_fsync_deps, reachable_prefix_no_deps) = compute_reachable_global_prefixes(replayer)
 
 	grps_0_1_no_deps = unique_grp(reachable_prefix_no_deps, replayer.conceptual_machines(), [0,1])
 	grps_0_1_fsync_deps  = unique_grp(reachable_prefix_fsync_deps, replayer.conceptual_machines(), [0,1])
@@ -673,4 +676,5 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 	MultiThreadedChecker.reset()
 	replay_correlated_atomicity_prefix(replayer, grps_0_1_no_deps, replayer.client_index, 'majority', 1, False)
 
+	uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
 	os.system('cp ' + os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'micro_ops') + ' ' + paceconfig(0).scratchpad_dir)

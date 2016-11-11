@@ -103,8 +103,12 @@ To check for vulnerabilities, just do ./run.sh True.
 
 ## Chapter 3: Caveat and limitations
 
-LD_PRELOAD -- statically linked does not work
-tested only with 3 servers and one client
+PACE is not complete – it can miss vulnerabilities. Specifically, PACE exercises only one and the same reordering
+at a time across the set of nodes. This is a limitation in implementation, not a fundamental one. See paper for details. Also, PACE does not focus on finding bugs in agreement protocols. It is interested in studying how distributed update/crash recovery protocols interact with local file system crash behaviors.
+
+As mentioned earlier, we depend on LD_PRELOAD working reliably to find dependencies across nodes. Thus, PACE won't work if your binaries are statically linked. In our experience, it is always easy to recompile the binaries of most distributed systems to be dynamically linked.
+
+We performed all our tests that emulate 3-server cluster and one client. PACE's code was tested only for this configuration. In theory, there should not be any problem if you want to test a 5-machine cluster, but we have not done that so far. If you run into bugs, please let us know and we can fix it. 
 
 ## Chapter 4: Credits, Acknowledgements, and Contact Information
 

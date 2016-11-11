@@ -1287,6 +1287,7 @@ def __get_micro_op(machine_id, syscall_tid, line, stackinfo, mtrace_recorded):
 				domain = parsed_line.args[0]
 				flags = parsed_line.args[1].split('|')
 				sock_fd = safe_string_to_int(parsed_line.ret)
+				protocol_number = 0
 
 				fd_flags = []
 				if 'SOCK_CLOEXEC' in flags:

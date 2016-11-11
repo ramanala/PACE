@@ -14,13 +14,30 @@ PACE first traces the events (like sending a message, receiving a message, writi
 
 ## 1. Getting Started
 
-Requirements:
+Requirements on a typical Ubuntu machine:
 
  1. Python-2.7, as the default version of python invoked via
     /usr/bin/env python.
  2. Standard software build tools, such as gcc and GNU Make.
  3. The libunwind libraries, installable in Ubuntu using apt-get
     install libunwind8-dev.
+
+Prerequisite steps to follow on clean machine
+
+sudo apt-get update
+sudo apt-get install build-essential
+sudo  apt-get install libunwind8-dev
+sudo apt-get install libaio-dev
+sudo apt-get -y install python-setuptools
+sudo easy_install pip
+sudo pip install bitvector
+sudo apt-get -y install libjpeg-dev
+sudo apt-get -y install python-reportlab
+sudo pip install reportlab
+
+You may need to install default jre and jdk (and associated build frameworks such as maven) if you want to test java based systems such as ZooKeeper.
+
+Note: sometimes, alice-strace fails if run as a normal user. if it fails, please run as sudo. Sometimes, the ld_preloads do not work reliably because implicit bind calls done inside them sometime may fail. Retracing and reparsing usually helps. 
 
 PACE was tested on Ubuntu-12.02 and Ubuntu 14.04, and is expected to work on similar (i.e., Linux-like) operating systems. 
 

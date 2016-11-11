@@ -131,3 +131,5 @@ example/multi-mongo/pace_conf
 example/riak/.gitignore
 example/riak/RELEASE-NOTES.md
 example/riak/workload.tar.gz
+
+alice-strace/.deps/net.Po

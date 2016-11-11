@@ -8,7 +8,7 @@ rm -rf traces_dir1
 rm -rf traces_dir2
 rm -rf traces_dir3
 rm -rf traces_dir4
-
+rm -rf prefix_states_cached
 rm -rf micro_ops*
 
 rm -rf workload_dir1
@@ -32,9 +32,17 @@ echo '1' > workload_dir2/myid
 echo '2' > workload_dir3/myid
 echo '3' > workload_dir4/myid
 
+# change to create zookeeper.out in cd
+cd workload_dir2
 $ZK_HOME/bin/zkServer.sh start $CURR_DIR/zoo2.cfg
+
+cd ../workload_dir3
 $ZK_HOME/bin/zkServer.sh start $CURR_DIR/zoo3.cfg
+
+cd ../workload_dir4
 $ZK_HOME/bin/zkServer.sh start $CURR_DIR/zoo4.cfg
+
+cd ..
 
 value=$(printf 'a%.s' {1..8192})
 echo 'create /zk_test '$value > script

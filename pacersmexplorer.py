@@ -650,12 +650,9 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 	replayer = DSReplayer(pace_configs, sock_config)
 	replayer.set_environment(defaultfs('count', 1), defaultnet(), load_cross_deps = True)
 	replayer.print_ops(show_io_ops = True)
-	client_index = replayer.client_index
 
 	print 'Successfully parsed logical operations!'
-	pace_conf_file = os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'pace_conf')
-	assert os.path.exists(pace_conf_file), "Hint: Run the prot tool to produce pace_conf file!"
-	
+
 	if replay == False:
 		return
 	
@@ -674,13 +671,13 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 	replay_correlated_global_prefix(replayer, grps_0_1_no_deps, False)
 
 	MultiThreadedChecker.reset()
-	replay_correlated_reordering(replayer, grps_0_1_fsync_deps, client_index, 'majority', 1, False)
+	replay_correlated_reordering(replayer, grps_0_1_fsync_deps, replayer.client_index, 'majority', 1, False)
 
 	MultiThreadedChecker.reset()
-	replay_correlated_atomicity_reordering(replayer, grps_0_1_no_deps, client_index, 'majority', 1, False)
+	replay_correlated_atomicity_reordering(replayer, grps_0_1_no_deps, replayer.client_index, 'majority', 1, False)
 
 	MultiThreadedChecker.reset()
-	replay_correlated_atomicity_prefix(replayer, grps_0_1_no_deps, client_index, 'majority', 1, False)
+	replay_correlated_atomicity_prefix(replayer, grps_0_1_no_deps, replayer.client_index, 'majority', 1, False)
 
 	os.system('cp ' + os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'micro_ops') + ' ' + paceconfig(0).scratchpad_dir)
 

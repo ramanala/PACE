@@ -1,14 +1,14 @@
 ## PACE: Protocol-Aware Correlated Crash Explorer
 
-This is a user documentation of the PACE tool, which can be used to
-discover “correlated crash vulnerabilities” in distributed storage systems.  
+This is a user documentation of the PACE tool, which
+discovers “correlated crash vulnerabilities” in distributed storage systems.  
 
 What are correlated crashes and correlated crash vulnerabilities?
-Correlated crashes happen when power outages cause entire data centers to fail or when correlated reboots (due to kernel bugs or upgrades) that take down all data replicas of a storage system almost
-simultaneously. Correlated crash vulnerabilities are problems in distributed storage systems such as data loss, data corruption, or unavailability that occur when correlated crashes occur. 
+Correlated crashes happen when power outages cause entire data centers to fail or when correlated reboots (due to kernel bugs or upgrades) take down all data replicas of a storage system almost
+simultaneously. Correlated crash vulnerabilities are problems in distributed storage systems such as data loss, data corruption, or unavailability that are exposed when correlated crashes occur. 
 
 How does PACE work at a very high-level?
-PACE first traces the events (like sending a message, receiving a message, writing to local storage etc.,) in a distributed storage system when a workload is run. Then, it processes the collected traces to find the network and file-system operations. Then, it calculates the persistent disk states could be reached if a correlated crash had happened during the execution of the workload. On each such state, PACE asserts conditions such as "did the system corrupt my data?",  "did the system become unavailable?", or "did the system lose my data?". These assertions are codified in a small script called the checker script.   Currently, PACE only aims to work against distributed storage systems that use commodity file systems such as ext4 or btrfs.  
+PACE first traces the events (like sending a message, receiving a message, writing to local storage etc.,) in a distributed storage system when a workload is run. Then, it processes the collected traces to find the network and file-system operations. Then, it calculates the persistent disk states that could be reached if a correlated crash had happened during the execution of the workload. On each such state, PACE asserts conditions such as "did the system corrupt my data?",  "did the system become unavailable?", or "did the system lose my data?". These assertions are codified in a small script called the checker script. Currently, PACE only aims to work against distributed storage systems that use commodity file systems such as ext4 or btrfs.  
 
 ## 1. Getting Started
 

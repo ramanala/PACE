@@ -60,7 +60,7 @@ Side note: We will associate the number '2' for the first storage server, '3' fo
 
 Here is the content of the config file:
 
-tickTime=2000
+tickTime=2000\n
 dataDir=/mnt/data1/PACE/example/zk/workload_dir2
 clientPort=2182
 initLimit=5
@@ -138,7 +138,7 @@ As mentioned earlier, PACE depends on LD_PRELOAD working reliably to find depend
 
 We performed all our tests that emulate 3-server cluster and one client. PACE's code was tested only for this configuration. In theory, there should be no problem if you want to test a 5-machine cluster, but we have not done that so far. If you run into bugs, please let us know and we will fix it. 
 
-## 5. Credits, Acknowledgements, and Contact Information
+## 5. Credits and Acknowledgements
 
 Ramnatthan Alagappan, Aishwarya Ganesan, and Thanumalayan Sankaranarayana Pillai were involved in design of PACE. PACE is inspired from ALICE that finds single-machine crash vulnerabilities (initially designed and implemented by Thanumalayan Sankaranarayana Pillai). Many parts of the code were directly forked off from ALICE and modified. Aishwarya Ganesan tested the tool extensively by applying it to multiple systems. Yuvraj Patel also tested the tool by applying it to elasticsearch.
 

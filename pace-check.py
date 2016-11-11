@@ -129,7 +129,7 @@ for trace_dir in args.trace_dirs:
 if args.explore == 'rsm':
 	pacersmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
 elif args.explore == 'non-rsm':
-	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
+	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, rule_set = [], replay = args.replay)
 else:
 	assert args.explore == 'bruteforce'
 	bruteforceexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)

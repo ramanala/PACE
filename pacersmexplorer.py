@@ -312,11 +312,6 @@ def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay 
 			MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], get_crash_point_id_string(crash_point))
 		count += 1
 
-		#if count == 1:
-		#	print 'Done'
-		#	MultiThreadedChecker.wait_and_get_outputs()
-		#	return
-			
 	if replay: 
 		MultiThreadedChecker.wait_and_get_outputs()
 		
@@ -389,11 +384,6 @@ def replay_correlated_atomicity_prefix(replayer, interesting_prefix_states, clie
 				(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 				replayer.construct_crashed_dirs(dirnames, stdout_files)
 				MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
-
-				#if count == 1:
-				#	print 'Done'
-				#	MultiThreadedChecker.wait_and_get_outputs()
-				#	return
 
 	if replay:		
 		MultiThreadedChecker.wait_and_get_outputs()
@@ -512,10 +502,6 @@ def replay_correlated_reordering(replayer, interesting_prefix_states, client_ind
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
 
-						#if reordering_count == 1:
-						#	print 'Done'
-						#	MultiThreadedChecker.wait_and_get_outputs()
-						#	return
 					replayer.mops_include_group(omit_pt)
 
 			del omittables
@@ -612,11 +598,6 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 						(base_path, dirnames,stdout_files) = get_replay_dirs(machines, base_name)
 						replayer.construct_crashed_dirs(dirnames, stdout_files)
 						MultiThreadedChecker.check_later(base_path, dirnames, stdout_files[machines[-1]], base_name)
-
-						#if atomicity_reordering_count == 1:
-						#	print 'Done'
-						#	MultiThreadedChecker.wait_and_get_outputs()
-						#	return
 
 					replayer.iops_include_group(atomic_omit)
 		

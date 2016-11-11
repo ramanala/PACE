@@ -12,7 +12,7 @@ simultaneously. Correlated crash vulnerabilities are problems in distributed sto
 How does PACE work at a very high-level?
 PACE first traces the events (like sending a message, receiving a message, writing to local storage etc.,) in a distributed storage system when a workload is run. Then, it processes the collected traces to find the network and file-system operations. Then, it calculates the persistent disk states could be reached if a correlated crash had happened during the execution of the workload. On each such state, PACE asserts conditions such as "did the system corrupt my data?",  "did the system become unavailable?", or "did the system lose my data?". These assertions are codified in a small script called the checker script.   Currently, PACE only aims to work against distributed storage systems that use commodity file systems such as ext4 or btrfs.  
 
-## Chapter 1: Installation
+## 1: Installation
 
 PACE was tested to work on Ubuntu-12.02 and Ubuntu 14.04, and should be expected to work on similar (i.e., Linux-like) operating systems. The following are requirements:
 
@@ -29,7 +29,7 @@ The following are the steps to install PACE:
  2. In PACE directory, you should find pace-record.py (that records the events) and pace-check.py (checks for vulnerabilities). These are the entry points to test any system. If needed, one can add the path to these files in .bashrc or these scripts can be invoked using path. 
  4. Install the alice-strace tracing framework by moving into the alice/alice-strace directory, and running ./configure; make; make install;
 
-## Chapter 2: An Example
+## 2: An Example
 
 This section describes how to use PACE to find correlated crash vulnerabilities in ZooKeeper. 
 
@@ -103,7 +103,7 @@ If PACE understands all dependencies then it will just spit out all the events t
 
 To check for vulnerabilities, just do ./run.sh True.  
 
-## Chapter 3: Caveat and limitations
+## 3: Caveat and limitations
 
 PACE is not complete – it can miss vulnerabilities. Specifically, PACE exercises only one and the same reordering
 at a time across the set of nodes. This is a limitation in implementation, not a fundamental one. See paper for details. Also, PACE does not focus on finding bugs in agreement protocols. It is interested in studying how distributed update/crash recovery protocols interact with local file system crash behaviors.
@@ -112,7 +112,7 @@ As mentioned earlier, we depend on LD_PRELOAD working reliably to find dependenc
 
 We performed all our tests that emulate 3-server cluster and one client. PACE's code was tested only for this configuration. In theory, there should not be any problem if you want to test a 5-machine cluster, but we have not done that so far. If you run into bugs, please let us know and we can fix it. 
 
-## Chapter 4: Credits, Acknowledgements, and Contact Information
+## 4: Credits, Acknowledgements, and Contact Information
 
 Ramnatthan Alagappan, Aishwarya Ganesan, and Thanumalayan Sankaranarayana Pillai were involved in design of PACE. PACE is inspired from ALICE that finds single-machine crash vulnerabilities (initially designed and implemented by Thanumalayan Sankaranarayana Pillai). Many parts of the code were directly forked off from ALICE and modified. Aishwarya Ganesan tested the tool extensively by applying it to multiple systems. Yuvraj Patel also tested the tool by applying it to elasticsearch.
 

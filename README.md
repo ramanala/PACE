@@ -20,7 +20,7 @@ Requirements:
     /usr/bin/env python.
  2. Standard software build tools, such as gcc and GNU Make.
  3. The libunwind libraries, installable in Ubuntu using apt-get
-    install libunwind7.
+    install libunwind8-dev.
 
 PACE was tested on Ubuntu-12.02 and Ubuntu 14.04, and is expected to work on similar (i.e., Linux-like) operating systems. 
 

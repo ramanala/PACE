@@ -71,9 +71,6 @@ example/iNexus/micro_ops*
 example/iNexus/pace_conf*
 example/iNexus/stack
 
-alice-strace/.deps/net.Po
-alice-strace/net.c
-
 example/activemq/
 example/etcd/1
 example/etcd/23

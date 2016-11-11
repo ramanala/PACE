@@ -8,10 +8,6 @@ import pickle
 import pprint
 from sets import Set
 
-# TODO: Change script to work correctly with multiple threads. Right now script
-# parses thread value, but doesn't really use that value anywhere.
-
-# Parse input arguments. 
 parser = argparse.ArgumentParser()
 parser.add_argument('--op_file', dest = 'op_file', type = str, default = False)
 parser.add_argument("-b","--brute_force_verify", help="Verify combinations via brute force", 
@@ -33,9 +29,7 @@ if args.very_verbose:
 
 # The list of syscalls we are interested in.
 # Interesting parameters.
-# write:    offset, count
-# sync:     offset, count
-# truncate: initial_size, final_size  
+# write, sync, truncate
 calls_of_interest = ["write", "sync", "delete_dir_entry", "create_dir_entry", "truncate"]
 net_interesting = ["socket", "bind", "connect", "accept", "listen", "recv", "send"]
 calls_of_interest += net_interesting
@@ -59,7 +53,6 @@ latest_fsync_on_any_file = None
 inode_to_filenames = defaultdict(set)
 filename_to_inode = {} 
 
-# Class to encapsulate operation details.
 class Operation:
 
     # All the setup
@@ -67,7 +60,7 @@ class Operation:
         global inode_to_filenames
         global filename_to_inode
 
-        #print(micro_op)
+
         self.syscall = micro_op.op 
         self.micro_op = micro_op
         # Set of ops that depend on this op: dropping this op means dropping those ops
@@ -79,7 +72,7 @@ class Operation:
             self.inode = micro_op.inode
             
         self.total_num_combos = 0
-        # Get the filename for metadata calls. 
+
         if micro_op.op in metadata_calls:  
             if micro_op.op in ["create_dir_entry", "delete_dir_entry"]:
                 self.parent = micro_op.parent
@@ -92,7 +85,6 @@ class Operation:
             # Note that an inode can be mapped to many names. We just get the
             # first name in the list. It shouldn't matter for most operations.
             for x in inode_to_filenames[self.inode]:
-                #print("setting filename to " + x) 
                 self.filename = x
                 break
         # Set offset and count for certain system calls.
@@ -183,7 +175,7 @@ class Operation:
         # fsync happening.
         # CLARIFY: does the op depend on the last fsync *on the same file* or
         # just the last fsync (on any file) in the thread?
-       # fsync: offset = 0, count = full size of file.
+        # fsync: offset = 0, count = full size of file.
         if latest_fsync_on_any_file:
             self.deps = self.deps | latest_fsync_on_any_file.deps
             self.deps.add(latest_fsync_on_any_file)

@@ -59,11 +59,6 @@ class MultiThreadedChecker(threading.Thread):
 		retcode = subprocess.call(args)
 		MultiThreadedChecker.outputs[crashid] = retcode
 		
-		#for dirname in dirnames.values():
-		#	os.system('rm -rf ' + dirname)
-			
-		#os.system('rm -rf ' + base_path + '/*.input_stdout')
-
 	def run(self):
 		while True:
 			task = self.queue.get()
@@ -90,7 +85,7 @@ def __get_crash_point_id_string(crash_point):
 		c = crash_point[i]
 		
 		if c == -1:
-			c = 'z'
+			c = 'z' # the node has not done any persistent state update
 			
 		if i < len(crash_point)-1:
 			toret += str(c) + "-"

@@ -31,7 +31,7 @@ from platform import machine
 from collections import defaultdict
 
 print '-------------------------------------------------------------------------------'
-print 'PACE version 1.0' 
+print 'PACE version 0.1' 
 print '-------------------------------------------------------------------------------'
 
 fs_interest_calls = ["write", "sync", "delete_dir_entry", "create_dir_entry", "truncate"]
@@ -42,9 +42,7 @@ def replay_net_ops(net_op):
 	# Think about this:
 	# If we are crashing all machines at an instant, you just do not need to worry
 	# about replaying the network syscalls. They affect only the in-memory state not per
-	# -sistent state. Then why bother? Ok, When we move to a richer failure model where
-	# components are reacting to failures, then we need to worry about the in-memory state.
-	# We will come here in the near future. For now, enjoy!
+	# -sistent state. Then why bother? But network calls are vital to find cross deps.
 	if net_op.op == 'socket':	
 		pass
 	elif net_op.op == 'connect':
@@ -272,7 +270,7 @@ class DSReplayer:
 	def is_legal_gp(self, end_at_points):
 		machines_to_consider = [m for m in range(0, len(end_at_points))]
 		
-		# RA-TODO: Using machine id and index as same things here. Needs to be fixed.
+		# TODO: Using machine id and index as same things here. Fix this assumption.
 		for machine in machines_to_consider:
 			deps = self.micro_ops[machine][end_at_points[machine]].implied_deps
 			for mach in deps.keys():

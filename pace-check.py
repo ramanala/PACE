@@ -129,9 +129,6 @@ for trace_dir in args.trace_dirs:
 	pace_configs.append(pace_config)
 	index += 1
 
-#pacedefaultexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
-#adhoc.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
-
 if args.is_rsm:
 	pacersmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
 else:

@@ -34,10 +34,6 @@ from collections import defaultdict
 from xml.dom.domreg import well_known_implementations
 import math
 
-innocent_net_calls = ['setsockopt','getsockopt','getsockname','shutdown', 'getpeername']
-interesting_net_calls = ['socket','bind','connect','listen','accept','socketpair','send','recv',
-'sendto','recvfrom','sendmsg','recvmsg','accept4','recvmmsg','sendmmsg', 'sendfile']
-
 innocent_syscalls = ["mknod", "_exit","_newselect","_sysctl","access","acct","add_key","adjtimex",
 "afs_syscall","alarm","alloc_hugepages","arch_prctl","break","brk","cacheflush",
 "capget","capset","clock_getres","clock_gettime","clock_nanosleep","clock_settime",
@@ -80,6 +76,9 @@ innocent_syscalls = ["mknod", "_exit","_newselect","_sysctl","access","acct","ad
 "syscall_317", "syscall_999", "syscall_318"]
 
 innocent_syscalls += ['mtrace_mmap', 'mtrace_munmap', 'mtrace_thread_start']
+innocent_net_calls = ['setsockopt','getsockopt','getsockname','shutdown', 'getpeername']
+interesting_net_calls = ['socket','bind','connect','listen','accept','socketpair','send','recv',
+'sendto','recvfrom','sendmsg','recvmsg','accept4','recvmmsg','sendmmsg', 'sendfile']
 
 # Some system calls have special 64-bit versions. The 64-bit versions
 # are not inherently different from the original versions, and strace
@@ -128,7 +127,7 @@ class ConnectionManager:
 		min_delta = sys.float_info.max
 		possible_candidates = [p for p in possible_candidates_all if p[0] == client_host and p[1] == client_port]		
 		
-		# We should be deterministically associate the accept and the connect system calls
+		# We should be able to deterministically associate the accept and the connect system calls
 		# on two different machines
 		assert len(possible_candidates) <= 1 
 
@@ -591,12 +590,11 @@ def __socket_parser(machine_id, parsed_line):
 				toret_host = arg.split('=')[1].replace('}', '').replace('{','').replace('inet_addr','').replace('(', '').replace(')','').replace('\"','')
 		elif s_family == 6:
 			if 'ffff' in arg:
-				# RA_TODO : This is a shameless hack to get the ipv4 address from the traces. 
-				# Haven't tested this with traces other than zk
+				# This is a shameless hack to get the ipv4 address from the traces. 
+				# Works for all systems that we study
 				toret_host = arg.replace('ffff','').replace(':','')
 			elif '\"::\"' == arg:
-				# RA_TODO : Fix this!
-				# This is a really bad hack to fill in the host address but works atleast with zk traces
+				# This is a bad hack to fill in the host address but works atleast for all systems we study
 				machine_addresses = connection_manager.addresses_for_machine_id(machine_id)
 				toret_host = machine_addresses
 			else:
@@ -724,10 +722,6 @@ def __get_micro_op(machine_id, syscall_tid, line, stackinfo, mtrace_recorded):
 								 client_port = client_port, has_cross_deps = True, remaining = recvd_data_size)
 					micro_operations.append(new_op)
 
-			# recvd_data_size = safe_string_to_int(parsed_line.ret)
- 			# if int(parsed_line.ret) > 0: #recvd some bytes atleast
-			#	new_op = Struct(op = 'recv', name = str(socktracker.get_name(fd)), size = recvd_data_size)
-			#	micro_operations.append(new_op)
 		else:
 			if not paceconfig(machine_id).ignore_file_read:
 				name = None
@@ -1304,8 +1298,6 @@ def __get_micro_op(machine_id, syscall_tid, line, stackinfo, mtrace_recorded):
 														None, -1, None, -1, attribs = fd_flags)
 				else:
 					assert parsed_line.args[2] == "IPPROTO_IP" or parsed_line.args[2] == "IPPROTO_TCP" or parsed_line.args[2] == "IPPROTO_UDP"
-					protocol_number = 0
-					assert protocol_number == 0 # I do not understand when it can be other than 0	
 					
 					name = str(machine_id) 			
 					if sock_fd >= 0:
@@ -1378,9 +1370,6 @@ def __get_micro_op(machine_id, syscall_tid, line, stackinfo, mtrace_recorded):
 							if candidate_client_socket[0] is not None:
 								assert connection_manager.machine_id_for_address(candidate_client_socket[0][0]) == machine_id
 						
-						# This connection should already be present in the map so no need to insert	
-						# connection_manager.connect_server_to_client(server_host, server_port, client_host, client_port, candidate_client_socket[2])
-
 						assert 'undefined_host' not in server_host
 						new_op = Struct(op = 'connect', name=str(socktracker.get_name(sock_fd)), server_host=str(server_host),\
 									 server_port=server_port, client_host=client_host, client_port=client_port)
@@ -1651,7 +1640,7 @@ def __get_micro_op(machine_id, syscall_tid, line, stackinfo, mtrace_recorded):
 
 						# We can optionally set the client socket information here for the parent socket but that is not necessary
 						# Note : If we parse the accept first, then the subsequent connect would be set with proper socket information
-						# But what happens if we parse the connect first and then the accept call? This needs to be taken care of. 
+						# But what happens if we parse the connect first and then the accept call? This is taken care of. 
 
 						assert 'undefined_host' not in server_host  and server_port != -1 and new_sock_fd != -1
 						assert 'undefined_host' not in client_host  and client_port != -1
@@ -1687,16 +1676,6 @@ def set_known_ports(known_ports):
 	global well_known_ports
 	assert all(isinstance(item, int) for item in known_ports)
 	well_known_ports = known_ports
-
-def __adjust_times(micro_ops):	
-	for mop in micro_ops:
-		# This is just a guess and otherwise we don't care much
-		if mop.hidden_duration > 1.000000:
-			assert mop.op == 'recv' # recvs are the only ops that should be so slow
-			mop.hidden_time += math.floor(mop.hidden_duration) 
-		
-	micro_ops = sorted(micro_ops, key = lambda mop: mop.hidden_time)
-	return micro_ops
 		
 def get_micro_ops(machine_id):
 	global connection_manager
@@ -1765,10 +1744,9 @@ def get_micro_ops(machine_id):
 							line = line[ 0 : m.start(0) ] + ', "' + client_host + '", ' + str(client_port) + line[m.start(0) : ]
 						
 				if parsed_line.syscall in ['send', 'sendto', 'sendmsg', 'sendfile']:
-					#packet_size = safe_string_to_int(parsed_line.ret)
 					m = re.search(r'\) += [^,]*$', line)
 					line = line[ 0 : m.start(0) ] + ', "' + dump_file + '", ' + str(dump_offset) + line[m.start(0) : ]
-					dump_offset += 0 #For now, we are not tracking the network buffers - RA-TODO : Fix pace-strace to capture nw buffers. 
+					dump_offset += 0 
 					
 				stacktrace = '[]\n' if paceconfig(machine_id).ignore_stacktrace else stackinfo_file.readline()
 				if parsed_line.syscall in innocent_syscalls or parsed_line.syscall.startswith("ignore_"):
@@ -1817,5 +1795,4 @@ def get_micro_ops(machine_id):
 			os.system("ls -lR " + paceconfig(machine_id).scratchpad_dir)
 			exit()
 
-	##micro_operations = __adjust_times(micro_operations)
 	return (path_inode_map, micro_operations)

@@ -1,5 +1,3 @@
-REPO NOT COMPLETE: PORTING IN PROGRESS! 
-
 ## PACE: Protocol-Aware Correlated Crash Explorer
 
 This is a user documentation of the PACE tool, which can be used to
@@ -129,7 +127,7 @@ Aside: PACE's code intentionally asserts conditions profusely. So, PACE will nev
 
 ## 3. Testing new systems
 
-To test a new system, you can simply follow the same pattern as ZooKeeper (init, workload, checker). More on rsm and non-rsm -- non-rsm rules. 
+To test a new system, you can simply follow the same pattern as ZooKeeper (init, workload, checker). If the system uses a state machine replication protocol such as Paxos, ZAB, or Raft, you can simply specify the --rsm parameter to explore the state space (this is most common case). If not, you need to understand details about the master election algorithm used in the system. Such examples for Redis and Kafka are described in detail in the paper. If you have any questions, please drop us a mail and we can help you figure out the exploration rules.
 
 ## 4. Caveats and limitations
 

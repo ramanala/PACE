@@ -25,8 +25,8 @@ import sys
 import os
 import subprocess
 import pickle
-import pacedefaultexplorer
 import pacersmexplorer
+import pacenonrsmexplorer
 import bruteforceexplorer
 
 parser = argparse.ArgumentParser()
@@ -41,6 +41,7 @@ parser.add_argument('--ignore_stacktrace', type = bool, default = True)
 parser.add_argument('--ignore_file_read', type = bool, default = True)
 parser.add_argument('--scratchpad_base', type = str)
 parser.add_argument('--explore', dest='explore', action='store', choices=['rsm','non-rsm','bruteforce'], help='Type of exploration strategy', required = True)
+parser.add_argument('--rule_set', '--rule_set', help='comma separated rule ids', type=str)
 
 args = parser.parse_args()
 args.checker = os.path.abspath(args.checker)
@@ -129,7 +130,9 @@ for trace_dir in args.trace_dirs:
 if args.explore == 'rsm':
 	pacersmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)
 elif args.explore == 'non-rsm':
-	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, rule_set = [], replay = args.replay)
+	assert args.rule_set is not None and len(args.rule_set) > 0
+	rule_set = [item for item in args.rule_set.split(',')]
+	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, rule_set, threads = args.threads, replay = args.replay)
 else:
 	assert args.explore == 'bruteforce'
 	bruteforceexplorer.check_corr_crash_vuls(pace_configs, sock_config, threads = args.threads, replay = args.replay)

@@ -292,9 +292,9 @@ def compute_reachable_global_prefixes(replayer):
 	return (final_reachable_prefix_fsync_deps, final_reachable_prefix_no_deps)
 
 def apm_machines(rule_set):
-	#• R3: Relaxed on the master.
-	#• R4: Relaxed on any one slave.
-	#• R5: Relaxed on all nodes at the same time
+	# R3: Relaxed on the master.
+	# R4: Relaxed on any one slave.
+	# R5: Relaxed on all nodes at the same time
 	to_ret  = []
 	#We are assuming about the order of machines
 	#Fix this assumption - TODO.
@@ -620,7 +620,7 @@ def replay_correlated_atomicity_reordering(replayer, interesting_prefix_states, 
 	print 'Atomicity reordering correlated states : ' + str(atomicity_reordering_count)
 	print 'Atomicity reordering correlated replay took approx ' + str(replay_end-replay_start) + ' seconds...'
 
-def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, rule_set, replay = False):
+def check_corr_crash_vuls(pace_configs, sock_config, rule_set, threads = 1, replay = False):
 	print 'Parsing traces to determine logical operations ...'
 
 	#initialize the replayer

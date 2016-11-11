@@ -630,21 +630,16 @@ def check_corr_crash_vuls(pace_configs, sock_config, threads = 1, replay = False
 	(interesting_prefix_states_reorder, interesting_prefix_states_other) = __get_interesting_prefixes(replayer)
 	workload_range = __get_workload_range(pace_configs, pace_conf_file, interesting_prefix_states_reorder)
 
-	mode = 'RSM'
-
 	MultiThreadedChecker.reset()
-	globally_valid_prefix(replayer, interesting_prefix_states_other, False)
+	globally_valid_prefix(replayer, interesting_prefix_states_other, True)
 	
 	MultiThreadedChecker.reset()
-	atomicity_prefix_correlated(replayer, interesting_prefix_states_other, client_index, False)
+	atomicity_prefix_correlated(replayer, interesting_prefix_states_other, client_index, True)
 
-	if mode == 'RSM':
-		MultiThreadedChecker.reset()
-		reordering_correlated(replayer, interesting_prefix_states_reorder, client_index, False)
+	MultiThreadedChecker.reset()
+	reordering_correlated(replayer, interesting_prefix_states_reorder, client_index, True)
 
-		MultiThreadedChecker.reset()
-		atomicity_reordering_correlated(replayer, interesting_prefix_states_other, client_index, False)
-	else:		
-		assert False
-
+	MultiThreadedChecker.reset()
+	atomicity_reordering_correlated(replayer, interesting_prefix_states_other, client_index, True)
+	
 	os.system('cp ' + os.path.join(uppath(paceconfig(0).cached_prefix_states_file, 1), 'micro_ops') + ' ' + paceconfig(0).scratchpad_dir)

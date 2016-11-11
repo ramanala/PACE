@@ -299,11 +299,13 @@ def apm_machines(rule_set):
 	#We are assuming about the order of machines
 	#Fix this assumption - TODO.
 	if 'r3' in rule_set:
-		to_ret += [0]  
+		to_ret.append([0])  
 	if 'r4' in rule_set:
-		to_ret += [1]
+		to_ret.append([1])
 	if 'r5' in rule_set:
-		to_ret += [0,1,2]
+		to_ret.append([0,1,2])
+
+	return to_ret
 
 def replay_correlated_global_prefix(replayer, interesting_prefix_states, replay = True):
 	print 'Checking prefix crash states...' 
@@ -645,7 +647,7 @@ def check_corr_crash_vuls(pace_configs, sock_config, rule_set, threads = 1, repl
 	(reachable_prefix_fsync_deps, reachable_prefix_no_deps) = compute_reachable_global_prefixes(replayer)
 
 	MultiThreadedChecker.reset()
-	replay_correlated_global_prefix(replayer, reachable_prefix_no_deps, rule_set, True)
+	replay_correlated_global_prefix(replayer, reachable_prefix_no_deps, True)
 
 	MultiThreadedChecker.reset()
 	replay_correlated_reordering(replayer, reachable_prefix_fsync_deps, replayer.client_index, rule_set, True)

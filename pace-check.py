@@ -41,7 +41,7 @@ parser.add_argument('--ignore_stacktrace', type = bool, default = True)
 parser.add_argument('--ignore_file_read', type = bool, default = True)
 parser.add_argument('--scratchpad_base', type = str)
 parser.add_argument('--explore', dest='explore', action='store', choices=['rsm','non-rsm','bruteforce'], help='Type of exploration strategy', required = True)
-parser.add_argument('--rule_set', '--rule_set', help='comma separated rule ids', type=str)
+parser.add_argument('--rule_set', '--rule_set', help='comma separated rule ids. supported: r3, r4 or r5.', type=str)
 
 args = parser.parse_args()
 args.checker = os.path.abspath(args.checker)
@@ -132,6 +132,7 @@ if args.explore == 'rsm':
 elif args.explore == 'non-rsm':
 	assert args.rule_set is not None and len(args.rule_set) > 0
 	rule_set = [item for item in args.rule_set.split(',')]
+	assert all(rule == 'r3' or rule == 'r4' or rule == 'r5' for rule in rule_set)
 	pacenonrsmexplorer.check_corr_crash_vuls(pace_configs, sock_config, rule_set, threads = args.threads, replay = args.replay)
 else:
 	assert args.explore == 'bruteforce'

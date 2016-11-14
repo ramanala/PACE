@@ -22,16 +22,16 @@ Requirements on a typical Ubuntu machine:
 
 Prerequisite steps to follow on clean machine
 
-sudo apt-get update
-sudo apt-get install build-essential
-sudo  apt-get install libunwind8-dev
-sudo apt-get install libaio-dev
-sudo apt-get -y install python-setuptools
-sudo easy_install pip
-sudo pip install bitvector
-sudo apt-get -y install libjpeg-dev
-sudo apt-get -y install python-reportlab
-sudo pip install reportlab
+sudo apt-get update;
+sudo apt-get install build-essential;
+sudo  apt-get install libunwind8-dev;
+sudo apt-get install libaio-dev;
+sudo apt-get -y install python-setuptools;
+sudo easy_install pip;
+sudo pip install bitvector;
+sudo apt-get -y install libjpeg-dev;
+sudo apt-get -y install python-reportlab;
+sudo pip install reportlab;
 
 You may need to install default jre and jdk (and associated build frameworks such as maven) if you want to test java based systems such as ZooKeeper.
 

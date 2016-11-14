@@ -20,7 +20,7 @@ Requirements on a typical Ubuntu machine:
  3. The libunwind libraries, installable in Ubuntu using apt-get
     install libunwind8-dev.
 
-Prerequisite steps to follow on clean machine
+Prerequisite steps to follow on a clean machine:
 
 sudo apt-get update;
 sudo apt-get install build-essential;
